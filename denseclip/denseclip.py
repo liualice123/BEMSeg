@@ -221,27 +221,6 @@ class DenseCLIP(BaseSegmentor):
         x_orig[self.score_concat_index] = torch.cat([x_orig[self.score_concat_index], score_map], dim=1)
         return text_embeddings, x_orig, score_map
 
-    # 只返回文本特征用于作图，包括多模态特征融合之前的和之后的
-    def extract_text_feat(self, x):
-        # no multimodal feature fusion
-        x_orig = list(x[0:4])
-        global_feat, visual_embeddings = x[4]
-        B, C, H, W = visual_embeddings.shape
-        if self.context_feature == 'attention':
-            visual_context = torch.cat([global_feat.reshape(B, C, 1), visual_embeddings.reshape(B, C, H*W)], dim=2).permute(0, 2, 1)  # B, N, C
-
-        # (B, K, C) 融合之前
-        text_embeddings = self.text_encoder(self.texts.to(global_feat.device), self.contexts).expand(B, -1, -1)
-        # 融合之后
-        # text_embeddings = self.text_encoder(self.texts.to(global_feat.device), self.contexts).expand(B, -1, -1)
-        # text_diff = self.context_decoder(text_embeddings, visual_context)
-        # text_embeddings = text_embeddings + self.gamma * text_diff
-
-        # compute score map and concat
-        B, K, C = text_embeddings.shape
-        text = F.normalize(text_embeddings, dim=2, p=2)
-        print(B,K,C)
-        return text
 
     def new_after_extract_feat(self, x):
         x_orig = list(x[0:4])
@@ -261,8 +240,6 @@ class DenseCLIP(BaseSegmentor):
 
         text_diff = self.context_decoder(text_embeddings, visual_context)
 
-        # print("--------------------test------------------")
-        # print(text_diff.shape)
         # (B, K, C)
         text_embeddings = text_embeddings + self.gamma * text_diff
         # vision_diff = vision_diff.permute(0, 2, 1).reshape(B, C, H, W)
@@ -296,7 +273,7 @@ class DenseCLIP(BaseSegmentor):
         global_, visual_ = x[4]
         _x_orig = [x[i] for i in range(4)]
 
-        text_embeddings, x_orig, score_map = self.after_extract_feat(x)
+        text_embeddings, x_orig, score_map = self.new_after_extract_feat(x)
         # text_feature = self.extract_text_feat(x)
 
         if self.with_neck:
@@ -311,15 +288,6 @@ class DenseCLIP(BaseSegmentor):
 
         loss_decode = self._decode_head_forward_train(x, img_metas,
                                                       gt_semantic_seg)
-        # print("-------------------test-------------------")
-        # print("设置断点")
-        # print(type(gt_semantic_seg))
-        # print(torch.max(gt_semantic_seg))     # JLYH是【8，1，512，512】而且值比较多，255，34，35，39，40，43，44，45，58，66，76，80，91，95，96，
-        # print(torch.min(gt_semantic_seg))
-        # print(gt_semantic_seg[0])    # potsdam也是【8，1，512，512】，但是对应的值只有0，1，2，3，4，5，255，也就是说需要先对JLYH的标签值进行调整
-        # t = numpy.array(gt_semantic_seg)
-        # print(numpy.max(gt_semantic_seg[0]))
-        # print(max(gt_semantic_seg))
 
         losses.update(loss_decode)
 
@@ -336,96 +304,7 @@ class DenseCLIP(BaseSegmentor):
         show_plot = False
         score = False
         text = False
-        with torch.no_grad():
-            if show_plot:
-                feature = self._decode_head_forward(x)  # 128的大小
-                seg_logit = resize(
-                    input=feature,
-                    size=gt_semantic_seg.shape[2:],
-                    mode='bilinear',
-                    align_corners=self.align_corners)
-                # print(seg_logit.shape)   # 512的大小
-                B, C, H, W = seg_logit.shape
-
-                feature = seg_logit.permute(0, 2, 3, 1)   # B,H,W,C
-                print("---------------------输出大小")
-
-                feature = feature.reshape(-1, C)
-                print(feature.shape)
-                gt_label = gt_semantic_seg.permute(0, 2, 3, 1).reshape(-1, 1) #B, H,W,C
-                gt_label [gt_label==255] = 6
-                print(gt_label.shape)
-                # print(torch.unique(gt_label))
-                feature = numpy.array(feature.cpu())
-                gt_label = numpy.array(gt_label.cpu())
-                # gt_label_2 = numpy.array(list(chain.from_iterable(gt_label)))
-
-                # feature = feature.tolist()
-                # gt_label = list(gt_label)
-
-                X_embedded = TSNE(n_components=2, perplexity=15, learning_rate=10).fit_transform(feature[:10000])
-                print("特征先压缩")
-                #
-                plotlabels(X_embedded, gt_label[:10000], 'title')
-
-                print("有没有结果")
-# 先保存好特征，再用T-SNE进行展示，因为整个训练流程是在cuda上进行的,输出的有可能是中间省略的，用保存到文件的方式来记录。
-#             print(label)
-#             print(gt_label)
-#             filename = 'write_data3.txt'
-#             with open(filename, 'w') as f:  # 如果filename不存在会自动创建， 'w'表示写数据，写之前会清空文件中的原有数据！
-#                 for data in feature:
-#                     f.write(str(data)+"\n")
-#                 f.write(str(gt_label))
-            # draw_tsne(feature, gt_label)
-
-        if score:
-            # 先来看特征，x[4]是全局特征和局部特征
-
-            B, C1, H, W = visual_.size()
-            visual_TNE = visual_.permute(0, 2, 3, 1).reshape(-1, C1)
-            print(visual_TNE.size())
-            visual_TNE = visual_TNE.tolist()
-
-            #再来看标签 score map是 bchw
-            score_pro = F.softmax(score_map / self.tau, 1)
-            B,C,H,W = score_pro.size()
-            print(C)
-            sco = score_pro.permute(0, 2, 3, 1).reshape(-1, C)
-            lab = torch.argmax(sco, 1)
-            # print(lab.size())
-            label = numpy.array(lab.cpu())
-            # gt_label_2 = numpy.array(list(chain.from_iterable(gt_label)))
-
-            label = list(label)
-
-            # 最后把它们写入文件
-            filename = 'write_data2.txt'
-            with open(filename, 'w') as f:  # 如果filename不存在会自动创建， 'w'表示写数据，写之前会清空文件中的原有数据！
-                for data in visual_TNE:
-                    f.write(str(data) + "\n")
-                f.write(str(label))
-                print(label)
-
-        if text:
-            B, N, C = text_feature.size()
-            text_feature = text_feature.reshape(-1, C)
-            print(text_feature.size())
-            text_TNE = text_feature.tolist()
-            # 最后把它们写入文件
-            label = []
-            for j in range(0, B):
-                for i in range(0, N):
-                    label.append(i)
-            filename = 'text_data.txt'
-            with open(filename, 'w') as f:  # 如果filename不存在会自动创建， 'w'表示写数据，写之前会清空文件中的原有数据！
-                for data in text_TNE:
-                    f.write(str(data) + "\n")
-
-                f.write(str(label))
-                print(label)
-
-        # print("--------------over------------------")
+       
         return losses
 
     def encode_decode(self, img, img_metas):
@@ -435,7 +314,7 @@ class DenseCLIP(BaseSegmentor):
         x = self.extract_feat(img)
 
         _x_orig = [x[i] for i in range(4)]
-        text_embeddings, x_orig, score_map = self.after_extract_feat(x)
+        text_embeddings, x_orig, score_map = self.new_after_extract_feat(x)
 
         if self.with_neck:
             x_orig = list(self.neck(x_orig))
