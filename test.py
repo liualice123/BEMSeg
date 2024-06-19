@@ -12,15 +12,6 @@ from mmseg.models import build_segmentor
 
 
 import denseclip
-# bash dist_test.sh configs/denseclip_fpn_res50_512x512_80k.py /home/liuqianqian/code/DenseCLIP-master/vaihingen/iter_80000.pth 1  --eval mIoU --aug-test
-# bash dist_test.sh configs/denseclip_fpn_res50_512x512_80k.py /home/liuqianqian/code/DenseCLIP-master/iter_80000.pth 1  --eval mIoU --aug-test
-# bash dist_test.sh configs/denseclip_fpn_res50_512x512_80k.py /media/D/lqq/multi-level/iter_40000.pth 1 --eval mIoU --aug-test
-# bash dist_test.sh configs/fpn_clipres50_512x512_80k.py /media/D/lqq/CLIP/fpn_clipres50_512x512_80k/iter_80000.pth 1 --eval mIoU --aug-test
-# bash dist_test.sh configs/VTSeg_fpn_res50_512x512_80k.py /media/D/lqq/VTSeg/bi-direction/VTSeg_fpn_res50_512x512_80k/iter_80000.pth 1 --eval mIoU --aug-test
-# bash dist_test.sh configs/VTSeg_fpn_res50_512x512_80k.py /media/D/lqq/VTSeg/JLYH/All_data/VTSeg_fpn_res50_512x512_80k/iter_80000.pth 1 --eval mIoU --aug-test
-# bash dist_test.sh configs/VTSeg_fpn_res50_512x512_80k_jlyh2020.py /media/D/lqq/VTSeg/jlyh/2020/VTSeg_fpn_res50_512x512_80k_jlyh2020/iter_56000.pth 1 --eval mIoU --aug-test
-# /media/D/lqq/VTSeg/jlyh/2022/VTSeg_fpn_res50_512x512_80k_jlyh2022
-# bash dist_test.sh configs/VTSeg_fpn_res50_512x512_80k_loveda.py /media/E/lqq/VTSeg/review/VTSeg_fpn_res50_512x512_80k_loveda/iter_80000.pth 1 --eval mIoU --aug-test
 
 def parse_args():
     parser = argparse.ArgumentParser(
