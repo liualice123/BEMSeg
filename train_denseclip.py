@@ -15,17 +15,8 @@ from mmseg.utils import collect_env, get_root_logger
 import denseclip
 import os
 import sys
-CUDA_VISIBLE_DEVICES = 1
-# CONFIG_PATH = 'configs/denseclip_fpn_vit-b_640x640_80k.py'
 
-# bash dist_train.sh configs/denseclip_fpn_vit-b_640x640_80k.py 1 --resume-from work_dirs/potsdam/iter_24000.pth
-# bash dist_train.sh configs/fpn_clipres50_512x512_80k.py 1 --resume-from /media/D/lqq/CLIP/fpn_clipres50_512x512_80k/iter_80000.pth
-# bash dist_train.sh configs/VTSeg_fpn_res50_896x896_80k.py 1 --resume-from /media/D/VTSeg/RN50/VTSeg_fpn_res50_896x896_80k/iter_8000.pth
-# cuda_visible_devices=0 bash dist_train.sh configs/VTSeg_fpn_res50_512x512_80k.py 1 --resume-from /media/D/lqq/VTSeg/batch8/VTSeg_fpn_res50_512x512_80k/iter_8000.pth
-# bash dist_train.sh configs/VTSeg_fpn_res50_512x512_80k_jlyh2022.py 1
-# bash dist_train.sh configs/CLIP_fpn_res50_512x512_80k_loveda.py 1
 
-#
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a segmentor')
     # parser.add_argument('--config', default=CONFIG_PATH, help='train config file path')
